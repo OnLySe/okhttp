@@ -61,6 +61,7 @@ class RetryAndFollowUpInterceptor(private val client: OkHttpClient) : Intercepto
         }
 
         try {
+          //此处调用了拦截器链RealInterceptorChain的proceed方法
           response = realChain.proceed(request)
           newRoutePlanner = true
         } catch (e: IOException) {

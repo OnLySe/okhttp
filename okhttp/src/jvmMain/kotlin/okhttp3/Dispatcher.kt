@@ -98,13 +98,14 @@ class Dispatcher() {
       return executorServiceOrNull!!
     }
 
-  /** Ready async calls in the order they'll be run. */
+
+  /** 正在准备中的异步请求队列 Ready async calls in the order they'll be run. */
   private val readyAsyncCalls = ArrayDeque<AsyncCall>()
 
-  /** Running asynchronous calls. Includes canceled calls that haven't finished yet. */
+  /** 运行中的异步请求队列 Running asynchronous calls. Includes canceled calls that haven't finished yet. */
   private val runningAsyncCalls = ArrayDeque<AsyncCall>()
 
-  /** Running synchronous calls. Includes canceled calls that haven't finished yet. */
+  /** 运行中的同步请求队列 Running synchronous calls. Includes canceled calls that haven't finished yet. */
   private val runningSyncCalls = ArrayDeque<RealCall>()
 
   constructor(executorService: ExecutorService) : this() {
@@ -156,7 +157,11 @@ class Dispatcher() {
    * executor service. Must not be called with synchronization because executing calls can call
    * into user code.
    *
+   * 将符合条件的调用从 readyAsyncCalls 提升为 runningAsyncCalls，并在执行程序服务上运行这些调用。
+   * 不得使用同步调用，因为执行调用可以调用用户代码。
+   *
    * @return true if the dispatcher is currently running calls.
+   * 如果调度程序当前正在运行calls，则返回 true。
    */
   private fun promoteAndExecute(): Boolean {
     this.assertThreadDoesntHoldLock()

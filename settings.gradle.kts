@@ -1,3 +1,5 @@
+//enableFeaturePreview("VERSION_CATALOGS")
+
 rootProject.name = "okhttp-parent"
 
 include(":mockwebserver")

@@ -5,4 +5,5 @@ plugins {
 dependencies {
   implementation(projects.okhttp)
   implementation(libs.squareup.moshi)
+  implementation(projects.loggingInterceptor)
 }

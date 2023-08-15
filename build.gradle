@@ -53,6 +53,10 @@ buildscript {
   }
 
   repositories {
+    maven { url("https://maven.aliyun.com/repository/google") }
+    maven { url("https://maven.aliyun.com/repository/public") }
+    maven { url("https://maven.aliyun.com/repository/jcenter") }
+
     mavenCentral()
     gradlePluginPortal()
     google()
@@ -92,6 +96,10 @@ allprojects {
   version = '4.9.3'
 
   repositories {
+    maven { url("https://maven.aliyun.com/repository/google") }
+    maven { url("https://maven.aliyun.com/repository/public") }
+    maven { url("https://maven.aliyun.com/repository/jcenter") }
+
     mavenCentral()
     maven {
       url 'https://dl.bintray.com/kotlin/dokka'

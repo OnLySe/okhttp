@@ -467,9 +467,16 @@ class RealCall(
 
   internal fun redactedUrl(): String = originalRequest.url.redact()
 
+  /**
+   * 异步请求
+   */
   internal inner class AsyncCall(
     private val responseCallback: Callback
   ) : Runnable {
+
+    /**
+     * 标记当前指向同一 Host 的请求数量
+     */
     @Volatile var callsPerHost = AtomicInteger(0)
       private set
 
@@ -489,6 +496,8 @@ class RealCall(
     /**
      * Attempt to enqueue this async call on [executorService]. This will attempt to clean up
      * if the executor has been shut down by reporting the call as failed.
+     *
+     * 尝试在 [executorService] 上将此异步调用排队。如果executor已关闭，这将尝试通过将调用报告为失败来清理。
      */
     fun executeOn(executorService: ExecutorService) {
       client.dispatcher.assertThreadDoesntHoldLock()

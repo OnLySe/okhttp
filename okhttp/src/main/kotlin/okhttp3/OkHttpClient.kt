@@ -122,11 +122,14 @@ open class OkHttpClient internal constructor(
   builder: Builder
 ) : Cloneable, Call.Factory, WebSocket.Factory {
 
+  /** 调度器 */
   @get:JvmName("dispatcher") val dispatcher: Dispatcher = builder.dispatcher
 
+  /**连接池 */
   @get:JvmName("connectionPool") val connectionPool: ConnectionPool = builder.connectionPool
 
   /**
+   * 拦截器列表
    * Returns an immutable list of interceptors that observe the full span of each call: from before
    * the connection is established (if any) until after the response source is selected (either the
    * origin server, cache, or both).
@@ -135,6 +138,7 @@ open class OkHttpClient internal constructor(
       builder.interceptors.toImmutableList()
 
   /**
+   * 网络拦截器列表
    * Returns an immutable list of interceptors that observe a single network request and response.
    * These interceptors must call [Interceptor.Chain.proceed] exactly once: it is an error for
    * a network interceptor to short-circuit or repeat a network request.
@@ -142,26 +146,36 @@ open class OkHttpClient internal constructor(
   @get:JvmName("networkInterceptors") val networkInterceptors: List<Interceptor> =
       builder.networkInterceptors.toImmutableList()
 
+  /** 事件监听 */
   @get:JvmName("eventListenerFactory") val eventListenerFactory: EventListener.Factory =
       builder.eventListenerFactory
 
+  /** 连接失败的时候是否重试 */
   @get:JvmName("retryOnConnectionFailure") val retryOnConnectionFailure: Boolean =
       builder.retryOnConnectionFailure
 
+  /** 源服务器身份验证 */
   @get:JvmName("authenticator") val authenticator: Authenticator = builder.authenticator
 
+  /** 是否允许重定向 */
   @get:JvmName("followRedirects") val followRedirects: Boolean = builder.followRedirects
 
+  /** 是否允许ssl重定向 */
   @get:JvmName("followSslRedirects") val followSslRedirects: Boolean = builder.followSslRedirects
 
+  /** Cookie */
   @get:JvmName("cookieJar") val cookieJar: CookieJar = builder.cookieJar
 
+  /** 缓存 */
   @get:JvmName("cache") val cache: Cache? = builder.cache
 
+  /** DNS */
   @get:JvmName("dns") val dns: Dns = builder.dns
 
+  /** 代理 */
   @get:JvmName("proxy") val proxy: Proxy? = builder.proxy
 
+  /** 代理选择器 */
   @get:JvmName("proxySelector") val proxySelector: ProxySelector =
       when {
         // Defer calls to ProxySelector.getDefault() because it can throw a SecurityException.
@@ -172,8 +186,10 @@ open class OkHttpClient internal constructor(
   @get:JvmName("proxyAuthenticator") val proxyAuthenticator: Authenticator =
       builder.proxyAuthenticator
 
+  /** Socket工厂 */
   @get:JvmName("socketFactory") val socketFactory: SocketFactory = builder.socketFactory
 
+  /** 安全套接层 */
   private val sslSocketFactoryOrNull: SSLSocketFactory?
 
   @get:JvmName("sslSocketFactory") val sslSocketFactory: SSLSocketFactory
@@ -184,10 +200,13 @@ open class OkHttpClient internal constructor(
   @get:JvmName("connectionSpecs") val connectionSpecs: List<ConnectionSpec> =
       builder.connectionSpecs
 
+  /** HTTP 协议 */
   @get:JvmName("protocols") val protocols: List<Protocol> = builder.protocols
 
+  /** 主机名字确认 */
   @get:JvmName("hostnameVerifier") val hostnameVerifier: HostnameVerifier = builder.hostnameVerifier
 
+  /** 证书链 */
   @get:JvmName("certificatePinner") val certificatePinner: CertificatePinner
 
   @get:JvmName("certificateChainCleaner") val certificateChainCleaner: CertificateChainCleaner?
@@ -201,13 +220,13 @@ open class OkHttpClient internal constructor(
   /** Default connect timeout (in milliseconds). The default is 10 seconds. */
   @get:JvmName("connectTimeoutMillis") val connectTimeoutMillis: Int = builder.connectTimeout
 
-  /** Default read timeout (in milliseconds). The default is 10 seconds. */
+  /** 读超时 Default read timeout (in milliseconds). The default is 10 seconds. */
   @get:JvmName("readTimeoutMillis") val readTimeoutMillis: Int = builder.readTimeout
 
-  /** Default write timeout (in milliseconds). The default is 10 seconds. */
+  /** 写超时 Default write timeout (in milliseconds). The default is 10 seconds. */
   @get:JvmName("writeTimeoutMillis") val writeTimeoutMillis: Int = builder.writeTimeout
 
-  /** Web socket and HTTP/2 ping interval (in milliseconds). By default pings are not sent. */
+  /** ping 之间的时间间隔 Web socket and HTTP/2 ping interval (in milliseconds). By default pings are not sent. */
   @get:JvmName("pingIntervalMillis") val pingIntervalMillis: Int = builder.pingInterval
 
   /**

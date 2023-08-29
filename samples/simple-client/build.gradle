@@ -1,5 +1,5 @@
 dependencies {
   implementation project(':okhttp')
   implementation deps.moshi
-//  implementation(projects.loggingInterceptor)
+  implementation project(":okhttp-logging-interceptor")
 }

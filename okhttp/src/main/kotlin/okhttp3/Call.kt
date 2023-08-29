@@ -23,10 +23,12 @@ import okio.Timeout
  * represents a single request/response pair (stream), it cannot be executed twice.
  */
 interface Call : Cloneable {
-  /** Returns the original request that initiated this call. */
+  /** <br>返回本次网络请求的 Request 对象 </br>Returns the original request that initiated this call. */
   fun request(): Request
 
   /**
+   * 发起同步请求，可能会抛出异常
+   *
    * Invokes the request immediately, and blocks until the response can be processed or is in error.
    *
    * To avoid leaking resources callers should close the [Response] which in turn will close the
@@ -55,6 +57,8 @@ interface Call : Cloneable {
   fun execute(): Response
 
   /**
+   * 发起异步请求，通过 Callback 来回调最终结果
+   *
    * Schedules the request to be executed at some point in the future.
    *
    * The [dispatcher][OkHttpClient.dispatcher] defines when the request will run: usually
@@ -67,15 +71,18 @@ interface Call : Cloneable {
    */
   fun enqueue(responseCallback: Callback)
 
-  /** Cancels the request, if possible. Requests that are already complete cannot be canceled. */
+  /** 取消网络请求  Cancels the request, if possible. Requests that are already complete cannot be canceled. */
   fun cancel()
 
   /**
-   * Returns true if this call has been either [executed][execute] or [enqueued][enqueue]. It is an
+   * 是否已经发起过请求 Returns true if this call has been either [executed][execute] or [enqueued][enqueue]. It is an
    * error to execute a call more than once.
    */
   fun isExecuted(): Boolean
 
+  /**
+   * 是否已经取消请求
+   */
   fun isCanceled(): Boolean
 
   /**
@@ -88,6 +95,8 @@ interface Call : Cloneable {
   fun timeout(): Timeout
 
   /**
+   * 同个 Call 不允许重复发起请求，想要再次发起请求可以通过此方法得到一个新的 Call 对象
+   *
    * Create a new, identical call to this one which can be enqueued or executed even if this call
    * has already been.
    */

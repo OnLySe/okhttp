@@ -39,6 +39,7 @@ class Dispatcher constructor() {
   /**
    * The maximum number of requests to execute concurrently. Above this requests queue in memory,
    * waiting for the running calls to complete.
+   * <br>翻译：要并发执行的最大请求数。在此请求上方，在内存中排队，等待正在运行的调用完成。</br>
    *
    * If more than [maxRequests] requests are in flight when this is invoked, those requests will
    * remain in flight.
@@ -53,6 +54,8 @@ class Dispatcher constructor() {
     }
 
   /**
+   * 同一 host 下的最大同时请求数
+   *
    * The maximum number of requests for each host to execute concurrently. This limits requests by
    * the URL's host name. Note that concurrent requests to a single IP address may still exceed this
    * limit: multiple hostnames may share an IP address or be routed through the same HTTP proxy.
@@ -98,13 +101,13 @@ class Dispatcher constructor() {
       return executorServiceOrNull!!
     }
 
-  /** Ready async calls in the order they'll be run. */
+  /** 正在准备中的异步请求队列 Ready async calls in the order they'll be run. */
   private val readyAsyncCalls = ArrayDeque<AsyncCall>()
 
-  /** Running asynchronous calls. Includes canceled calls that haven't finished yet. */
+  /** 运行中的异步请求队列 Running asynchronous calls. Includes canceled calls that haven't finished yet. */
   private val runningAsyncCalls = ArrayDeque<AsyncCall>()
 
-  /** Running synchronous calls. Includes canceled calls that haven't finished yet. */
+  /** 运行中的同步请求队列 Running synchronous calls. Includes canceled calls that haven't finished yet. */
   private val runningSyncCalls = ArrayDeque<RealCall>()
 
   constructor(executorService: ExecutorService) : this() {
@@ -118,13 +121,19 @@ class Dispatcher constructor() {
       // Mutate the AsyncCall so that it shares the AtomicInteger of an existing running call to
       // the same host.
       if (!call.call.forWebSocket) {
+        //查找当前是否有指向同一 Host 的异步请求
         val existingCall = findExistingCallWithHost(call.host)
+        //如果有指向同一Host的变量，则修改Call的callsPerHost变量
         if (existingCall != null) call.reuseCallsPerHostFrom(existingCall)
       }
     }
+    //promote的意思是提升，该方法判断当前是否发起请求
     promoteAndExecute()
   }
 
+  /**
+   * 查找当前是否有指向同一 Host 的异步请求，有的话就返回
+   */
   private fun findExistingCallWithHost(host: String): AsyncCall? {
     for (existingCall in runningAsyncCalls) {
       if (existingCall.host == host) return existingCall
@@ -156,7 +165,10 @@ class Dispatcher constructor() {
    * executor service. Must not be called with synchronization because executing calls can call
    * into user code.
    *
-   * @return true if the dispatcher is currently running calls.
+   * 将符合条件的调用从 [readyAsyncCalls] 提升为 [runningAsyncCalls]，并在执行程序服务上运行这些调用。
+   * 不得使用同步调用，因为执行调用可以调用用户代码。
+   *
+   * @return true if the dispatcher is currently running calls. 如果调度程序当前正在运行calls，则返回 true。
    */
   private fun promoteAndExecute(): Boolean {
     this.assertThreadDoesntHoldLock()
@@ -168,7 +180,9 @@ class Dispatcher constructor() {
       while (i.hasNext()) {
         val asyncCall = i.next()
 
+        //如果当前正在运行的请求数量超出最大并发执行数量，则退出循环
         if (runningAsyncCalls.size >= this.maxRequests) break // Max capacity.
+        //相同Host的网络请求数量如果超出最大（默认是5），则进入下一次循环
         if (asyncCall.callsPerHost.get() >= this.maxRequestsPerHost) continue // Host max capacity.
 
         i.remove()

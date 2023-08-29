@@ -29,9 +29,11 @@ import okhttp3.internal.connection.RealCall
 /**
  * A concrete interceptor chain that carries the entire interceptor chain: all application
  * interceptors, the OkHttp core, all network interceptors, and finally the network caller.
+ * 承载整个拦截器链的具体拦截器链：所有应用程序拦截器、OkHttp 核心、所有网络拦截器，最后是网络调用方。
  *
  * If the chain is for an application interceptor then [exchange] must be null. Otherwise it is for
  * a network interceptor and [exchange] must be non-null.
+ * 如果链用于应用程序拦截器，则exchange（交换）必须为空。否则，它适用于网络拦截器，交换必须为非空。
  */
 class RealInterceptorChain(
   internal val call: RealCall,
@@ -102,10 +104,13 @@ class RealInterceptorChain(
     }
 
     // Call the next interceptor in the chain.
+    // 通过copy创建一个RealInterceptorChain，这里传入的index是在当前index的基础上加1。
     val next = copy(index = index + 1, request = request)
+    //获取指定index上的Interceptor，index是不可变局部变量
     val interceptor = interceptors[index]
 
     @Suppress("USELESS_ELVIS")
+    //调用拦截器的拦截方法，并返回response
     val response = interceptor.intercept(next) ?: throw NullPointerException(
         "interceptor $interceptor returned null")
 

@@ -94,10 +94,13 @@ class RealInterceptorChain(
 
     calls++
 
+    //exchange在执行连接拦截器前都是为null的，它是对请求流的一个封装
     if (exchange != null) {
+      //当请求流不为null时，我们需要检查Url或者端口是否被改变，如果被改变直接报错，因为在建立连接后它不允许被改变
       check(exchange.finder.sameHostAndPort(request.url)) {
         "network interceptor ${interceptors[index - 1]} must retain the same host and port"
       }
+      //连接拦截器及其后续拦截器只能执行一次proceed方法
       check(calls == 1) {
         "network interceptor ${interceptors[index - 1]} must call proceed() exactly once"
       }
@@ -114,6 +117,7 @@ class RealInterceptorChain(
     val response = interceptor.intercept(next) ?: throw NullPointerException(
         "interceptor $interceptor returned null")
 
+    //确保连接拦截器及后面的拦截器（除最后一个拦截器外）必须执行一次
     if (exchange != null) {
       check(index + 1 >= interceptors.size || next.calls == 1) {
         "network interceptor $interceptor must call proceed() exactly once"

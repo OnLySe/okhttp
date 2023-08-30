@@ -145,6 +145,7 @@ class RealCall(
   override fun isCanceled() = canceled
 
   override fun execute(): Response {
+    //Call只能执行一次，重复执行需要调用newCall来创建新的Call对象，重复调用同一个call来进行网络请求会抛出异常
     check(executed.compareAndSet(false, true)) { "Already Executed" }
 
     timeout.enter()
@@ -175,16 +176,23 @@ class RealCall(
   internal fun getResponseWithInterceptorChain(): Response {
     // Build a full stack of interceptors.
     val interceptors = mutableListOf<Interceptor>()
+    //添加应用拦截器
     interceptors += client.interceptors
+    //添加重试与重定向拦截器
     interceptors += RetryAndFollowUpInterceptor(client)
+    //添加桥接拦截器
     interceptors += BridgeInterceptor(client.cookieJar)
+    //添加缓存拦截器
     interceptors += CacheInterceptor(client.cache)
+    //添加连接拦截器
     interceptors += ConnectInterceptor
     if (!forWebSocket) {
       interceptors += client.networkInterceptors
     }
+    //添加请求拦截器
     interceptors += CallServerInterceptor(forWebSocket)
 
+    //创建责任链，注意这里传入的exchange的初始值为null
     val chain = RealInterceptorChain(
         call = this,
         interceptors = interceptors,

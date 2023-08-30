@@ -184,7 +184,7 @@ class Dispatcher constructor() {
         if (runningAsyncCalls.size >= this.maxRequests) break // Max capacity.
         //相同Host的网络请求数量如果超出最大（默认是5），则进入下一次循环
         if (asyncCall.callsPerHost.get() >= this.maxRequestsPerHost) continue // Host max capacity.
-
+        //将Call从readyAsyncCalls中移除
         i.remove()
         asyncCall.callsPerHost.incrementAndGet()
         executableCalls.add(asyncCall)
@@ -195,6 +195,7 @@ class Dispatcher constructor() {
 
     for (i in 0 until executableCalls.size) {
       val asyncCall = executableCalls[i]
+      //提交线程池任务
       asyncCall.executeOn(executorService)
     }
 

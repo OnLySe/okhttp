@@ -38,7 +38,10 @@ import okio.Buffer
 import okio.Source
 import okio.buffer
 
-/** Serves requests from the cache and writes responses to the cache. */
+/**
+ * 缓存拦截器，如果命中缓存，就加载缓存而不去进行网络请求
+ * Serves requests from the cache and writes responses to the cache.
+ */
 class CacheInterceptor(internal val cache: Cache?) : Interceptor {
 
   @Throws(IOException::class)
@@ -48,8 +51,11 @@ class CacheInterceptor(internal val cache: Cache?) : Interceptor {
 
     val now = System.currentTimeMillis()
 
+    //获得缓存策略，并判断是否使用网络。
     val strategy = CacheStrategy.Factory(now, chain.request(), cacheCandidate).compute()
+    //返回null 表示不允许使用网络
     val networkRequest = strategy.networkRequest
+    //返回null表示未击中缓存
     val cacheResponse = strategy.cacheResponse
 
     cache?.trackResponse(strategy)
@@ -57,10 +63,12 @@ class CacheInterceptor(internal val cache: Cache?) : Interceptor {
 
     if (cacheCandidate != null && cacheResponse == null) {
       // The cache candidate wasn't applicable. Close it.
+      //缓存候选人不适用，则关闭它。
       cacheCandidate.body?.closeQuietly()
     }
 
     // If we're forbidden from using the network and the cache is insufficient, fail.
+    // 如果我们被禁止使用网络并且缓存不足，则失败。
     if (networkRequest == null && cacheResponse == null) {
       return Response.Builder()
           .request(chain.request())
@@ -76,6 +84,7 @@ class CacheInterceptor(internal val cache: Cache?) : Interceptor {
     }
 
     // If we don't need the network, we're done.
+    //如果我们不需要网络，并且缓存可用，那么我们就返回缓存。
     if (networkRequest == null) {
       return cacheResponse!!.newBuilder()
           .cacheResponse(stripBody(cacheResponse))
@@ -84,18 +93,24 @@ class CacheInterceptor(internal val cache: Cache?) : Interceptor {
           }
     }
 
+    //到这一步了，其实缓存可能命中（协商缓存）也可能未命中，但是都得通过网络去判断。
+
     if (cacheResponse != null) {
+      //缓存命中
       listener.cacheConditionalHit(call, cacheResponse)
     } else if (cache != null) {
+      //缓存未命中
       listener.cacheMiss(call)
     }
 
     var networkResponse: Response? = null
     try {
+      //进入下一层 并获取网络响应
       networkResponse = chain.proceed(networkRequest)
     } finally {
       // If we're crashing on I/O or otherwise, don't leak the cache body.
       if (networkResponse == null && cacheCandidate != null) {
+        //关闭缓存，防止泄露
         cacheCandidate.body?.closeQuietly()
       }
     }
@@ -103,6 +118,7 @@ class CacheInterceptor(internal val cache: Cache?) : Interceptor {
     // If we have a cache response too, then we're doing a conditional get.
     if (cacheResponse != null) {
       if (networkResponse?.code == HTTP_NOT_MODIFIED) {
+        //协商缓存成功，服务端返回的是304重定向，所以在这里利用缓存构建响应数据
         val response = cacheResponse.newBuilder()
             .headers(combine(cacheResponse.headers, networkResponse.headers))
             .sentRequestAtMillis(networkResponse.sentRequestAtMillis)
@@ -115,6 +131,7 @@ class CacheInterceptor(internal val cache: Cache?) : Interceptor {
 
         // Update the cache after combining headers but before stripping the
         // Content-Encoding header (as performed by initContentStream()).
+        //在剥离Content-Enconding 字段前更新缓存
         cache!!.trackConditionalCacheHit()
         cache.update(cacheResponse, response)
         return response.also {
@@ -125,23 +142,27 @@ class CacheInterceptor(internal val cache: Cache?) : Interceptor {
       }
     }
 
+    //利用网络返回数据，构建响应数据
     val response = networkResponse!!.newBuilder()
         .cacheResponse(stripBody(cacheResponse))
         .networkResponse(stripBody(networkResponse))
         .build()
 
     if (cache != null) {
+      //如果缓存对象cache不为空，则设置缓存
       if (response.promisesBody() && CacheStrategy.isCacheable(response, networkRequest)) {
         // Offer this request to the cache.
         val cacheRequest = cache.put(response)
         return cacheWritingResponse(cacheRequest, response).also {
           if (cacheResponse != null) {
             // This will log a conditional cache miss only.
+            //提交数据给缓存，同时记录缓存未命中
             listener.cacheMiss(call)
           }
         }
       }
 
+      //只缓存GET请求的数据
       if (HttpMethod.invalidatesCache(networkRequest.method)) {
         try {
           cache.remove(networkRequest)

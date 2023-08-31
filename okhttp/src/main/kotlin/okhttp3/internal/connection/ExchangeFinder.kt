@@ -52,6 +52,8 @@ import okhttp3.internal.http2.StreamResetException
  *
  * Instances of this class are not thread-safe. Each instance is thread-confined to the thread
  * executing [call].
+ *
+ * ExchangeFinder可以理解为寻找这条连接的工具，寻找一条可用的连接以及相应的一些信息。
  */
 class ExchangeFinder(
   private val connectionPool: RealConnectionPool,

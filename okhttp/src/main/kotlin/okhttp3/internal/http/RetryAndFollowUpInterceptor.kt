@@ -48,6 +48,8 @@ import okhttp3.internal.http2.ConnectionShutdownException
 import okhttp3.internal.withSuppressed
 
 /**
+ * 重试与重定向。如果站点不能访问，且返回数据中，code为3xx，location字段不为null，就会进行一次重定向请求
+ *
  * This interceptor recovers from failures and follows redirects as necessary. It may throw an
  * [IOException] if the call was canceled.
  */
@@ -63,12 +65,14 @@ class RetryAndFollowUpInterceptor(private val client: OkHttpClient) : Intercepto
     var newExchangeFinder = true
     var recoveredFailures = listOf<IOException>()
     while (true) {
+      //第一次进入 循环时 newExchangeFinder为true，此时会创建一个ExchangeFinder对象，负责获取一条安全可靠的链接来携带请求
       call.enterNetworkInterceptorExchange(request, newExchangeFinder)
 
       var response: Response
       var closeActiveExchange = true
       try {
         if (call.isCanceled()) {
+          //如果本次请求被取消，那么抛出错误，跳出循环
           throw IOException("Canceled")
         }
 
@@ -87,11 +91,13 @@ class RetryAndFollowUpInterceptor(private val client: OkHttpClient) : Intercepto
           continue
         } catch (e: IOException) {
           // An attempt to communicate with a server failed. The request may have been sent.
+          //进入recover方法，在该方法中如果错误是可以恢复的，那么将返回true进行重试，否则返回false，直接抛出错误。
           if (!recover(e, call, request, requestSendStarted = e !is ConnectionShutdownException)) {
             throw e.withSuppressed(recoveredFailures)
           } else {
             recoveredFailures += e
           }
+          //由于是重试，将该参数设置为false。
           newExchangeFinder = false
           continue
         }
@@ -105,9 +111,12 @@ class RetryAndFollowUpInterceptor(private val client: OkHttpClient) : Intercepto
               .build()
         }
 
+        //该对象负责编码和解码
         val exchange = call.interceptorScopedExchange
+        //在这个方法中，会根据response中的字段，判断是否进行重定向,若重定向则会返回新的request，否则返回null
         val followUp = followUpRequest(response, exchange)
 
+        //不重定向直接返回
         if (followUp == null) {
           if (exchange != null && exchange.isDuplex) {
             call.timeoutEarlyExit()
@@ -116,6 +125,7 @@ class RetryAndFollowUpInterceptor(private val client: OkHttpClient) : Intercepto
           return response
         }
 
+        //一次性请求，不再重试或者重定向
         val followUpBody = followUp.body
         if (followUpBody != null && followUpBody.isOneShot()) {
           closeActiveExchange = false
@@ -124,6 +134,7 @@ class RetryAndFollowUpInterceptor(private val client: OkHttpClient) : Intercepto
 
         response.body?.closeQuietly()
 
+        //重定向次数超过一定次数就会抛出错误
         if (++followUpCount > MAX_FOLLOW_UPS) {
           throw ProtocolException("Too many follow-up requests: $followUpCount")
         }
@@ -293,8 +304,12 @@ class RetryAndFollowUpInterceptor(private val client: OkHttpClient) : Intercepto
     // Does the client allow redirects?
     if (!client.followRedirects) return null
 
+    //访问站点，如果站点不处理，需要向新的站点发起请求，那么就会返回3xx错误码并把location字段放入返回数据中
+    //location表示需要重定向的url
     val location = userResponse.header("Location") ?: return null
     // Don't follow redirects to unsupported protocols.
+    //翻译：不要遵循重定向到不受支持的协议。
+    //如果location字段不为null，就会进行一次重定向请求
     val url = userResponse.request.url.resolve(location) ?: return null
 
     // If configured, don't follow redirects between SSL and non-SSL.

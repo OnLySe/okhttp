@@ -260,6 +260,7 @@ class RealCall(
     }
 
     val exchangeFinder = this.exchangeFinder!!
+    //寻找可用的连接
     val codec = exchangeFinder.find(client, chain)
     val result = Exchange(this, eventListener, exchangeFinder, codec)
     this.interceptorScopedExchange = result

@@ -22,7 +22,10 @@ import okhttp3.Response
 import okhttp3.internal.EMPTY_RESPONSE
 import okio.buffer
 
-/** This is the last interceptor in the chain. It makes a network call to the server. */
+/**
+ * 由[CallServerInterceptor]去发送请求与服务器交互数据
+ * This is the last interceptor in the chain. It makes a network call to the server.
+ */
 class CallServerInterceptor(private val forWebSocket: Boolean) : Interceptor {
 
   @Throws(IOException::class)
@@ -33,6 +36,7 @@ class CallServerInterceptor(private val forWebSocket: Boolean) : Interceptor {
     val requestBody = request.body
     val sentRequestMillis = System.currentTimeMillis()
 
+    //使用对应的编码器进行http请求头的构建
     exchange.writeRequestHeaders(request)
 
     var invokeStartEvent = true

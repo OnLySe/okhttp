@@ -36,6 +36,9 @@ import okio.buffer
 /**
  * Transmits a single HTTP request and a response pair. This layers connection management and events
  * on [ExchangeCodec], which handles the actual I/O.
+ * 翻译：传输单个HTTP请求和一对响应。这将[ExchangeCodec]上的连接管理和事件分层，后者处理实际的I/O。
+ *
+ * 一次数据交换、可以理解为一条连接客户端和服务端的连接。
  */
 class Exchange(
   internal val call: RealCall,

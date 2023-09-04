@@ -40,6 +40,8 @@ import okio.buffer
 
 /**
  * 缓存拦截器，如果命中缓存，就加载缓存而不去进行网络请求
+ * 如果之前缓存了该请求url的资源，那么通过request对象可以查找到这个缓存响应
+ *
  * Serves requests from the cache and writes responses to the cache.
  */
 class CacheInterceptor(internal val cache: Cache?) : Interceptor {
@@ -69,6 +71,8 @@ class CacheInterceptor(internal val cache: Cache?) : Interceptor {
 
     // If we're forbidden from using the network and the cache is insufficient, fail.
     // 如果我们被禁止使用网络并且缓存不足，则失败。
+    // 如果networkRequest和cacheResponse都为null，说明没有可用的缓存，同时请求通过`Cache-Control:only-if-cached`只
+    // 允许我们使用当前的缓存数据。这个时候只能返回一个504的响应（HTTP_GATEWAY_TIMEOUT的值就是504）
     if (networkRequest == null && cacheResponse == null) {
       return Response.Builder()
           .request(chain.request())
@@ -85,6 +89,7 @@ class CacheInterceptor(internal val cache: Cache?) : Interceptor {
 
     // If we don't need the network, we're done.
     //如果我们不需要网络，并且缓存可用，那么我们就返回缓存。
+    //如果networkRequest为null，那么就不需要验证了，直接将cacheResponse作为结果返回
     if (networkRequest == null) {
       return cacheResponse!!.newBuilder()
           .cacheResponse(stripBody(cacheResponse))
@@ -92,6 +97,9 @@ class CacheInterceptor(internal val cache: Cache?) : Interceptor {
             listener.cacheHit(call, it)
           }
     }
+
+    //走到这里，说明networkRequest不会是null，那么有两种情况cacheResponse为null，或者cacheResponse不为null
+    //前者表示没有可用的缓存，这是个普通请求，后者表示有一个可能过期了的缓存
 
     //到这一步了，其实缓存可能命中（协商缓存）也可能未命中，但是都得通过网络去判断。
 
@@ -117,6 +125,7 @@ class CacheInterceptor(internal val cache: Cache?) : Interceptor {
 
     // If we have a cache response too, then we're doing a conditional get.
     if (cacheResponse != null) {
+      //再验证
       if (networkResponse?.code == HTTP_NOT_MODIFIED) {
         //协商缓存成功，服务端返回的是304重定向，所以在这里利用缓存构建响应数据
         val response = cacheResponse.newBuilder()
@@ -133,6 +142,7 @@ class CacheInterceptor(internal val cache: Cache?) : Interceptor {
         // Content-Encoding header (as performed by initContentStream()).
         //在剥离Content-Enconding 字段前更新缓存
         cache!!.trackConditionalCacheHit()
+        //拿到网络响应数据后，更新缓存中的数据
         cache.update(cacheResponse, response)
         return response.also {
           listener.cacheHit(call, it)

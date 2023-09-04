@@ -22,6 +22,8 @@ import okhttp3.Response
 import okhttp3.internal.http.RealInterceptorChain
 
 /**
+ * 负责和服务器建立连接
+ *
  * Opens a connection to the target server and proceeds to the next interceptor. The network might
  * be used for the returned response, or to validate a cached response with a conditional GET.
  */

@@ -139,12 +139,20 @@ class CacheStrategy internal constructor(
 
     /** Returns a strategy to use assuming the request can use the network. */
     private fun computeCandidate(): CacheStrategy {
-      // No cached response.
+      /**********************************开始*******************************************************/
+      /**
+       * 以下列出四种情况下忽略缓存，直接向服务器发起请求的情况
+       * 1. 缓存本身不存在
+       * 2. 请求是采用https 并且缓存没有进行握手的数据。
+       * 3. 缓存本身不应该不保存下来。可能是缓存本身实现有问题，把一些不应该缓存的数据保留了下来。
+       * 4. 如果请求本身添加了 Cache-Control: No-Cache，或是一些条件请求首部，说明请求不希望使用缓存数据。
+       */
+      // No cached response. 缓存本身不存在
       if (cacheResponse == null) {
         return CacheStrategy(request, null)
       }
 
-      // Drop the cached response if it's missing a required handshake.
+      // Drop the cached response if it's missing a required handshake. 请求是采用https 并且缓存没有进行握手的数据。
       if (request.isHttps && cacheResponse.handshake == null) {
         return CacheStrategy(request, null)
       }
@@ -152,14 +160,17 @@ class CacheStrategy internal constructor(
       // If this response shouldn't have been stored, it should never be used as a response source.
       // This check should be redundant as long as the persistence store is well-behaved and the
       // rules are constant.
+      // 缓存本身不应该不保存下来。可能是缓存本身实现有问题，把一些不应该缓存的数据保留了下来。
       if (!isCacheable(cacheResponse, request)) {
         return CacheStrategy(request, null)
       }
 
+      // 如果请求本身添加了 Cache-Control: No-Cache，或是一些条件请求首部（请求头），说明请求不希望使用缓存数据。
       val requestCaching = request.cacheControl
       if (requestCaching.noCache || hasConditions(request)) {
         return CacheStrategy(request, null)
       }
+      /**********************************结束*******************************************************/
 
       val responseCaching = cacheResponse.cacheControl
 
